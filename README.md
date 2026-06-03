@@ -16,9 +16,9 @@ Every 15 minutes, the pipeline automatically executes the following workflow:
 
 ## Features currently need working on
 
--- script validation testing for the scientific data files
--- Continous integration + automated testing via github actions
--- Prometheus + grafana monitoring and metrics display
+- script validation testing for the scientific data files
+- Continous integration + automated testing via github actions
+- Prometheus + grafana monitoring and metrics display
 
 ---
 
