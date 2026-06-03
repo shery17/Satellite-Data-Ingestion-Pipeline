@@ -1,0 +1,5 @@
+eumdac
+python-dotenv
+psycopg2-binary
+prometheus-client
+apscheduler

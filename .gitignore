@@ -1,0 +1,51 @@
+# ==========================================
+# 1. Pipeline Secrets & Environment Config
+# ==========================================
+.env
+.env.*
+!.env.example
+
+# ==========================================
+# 2. Python Environment & Cache
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+ENV/
+modules/
+
+# ==========================================
+# 3. Data Pipeline Directories (Storage Tiers)
+# ==========================================
+data/inbound/*.zip
+data/archive/*.tar.gz
+data/quarantine/*
+
+# ==========================================
+# 4. Logs & Operational Telemetry
+# ==========================================
+logs/*.log
+*.log
+
+# ==========================================
+# 5. Docker & Database Local Storage
+# ==========================================
+# Ignore local named volumes or bind-mount data if mapped to a local folder
+.docker/
+postgres_data/
+
+# ==========================================
+# 6. OS & IDE Specific Files
+# ==========================================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp

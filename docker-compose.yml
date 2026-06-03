@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: pipeline_database
+    environment:
+      POSTGRES_USER: pipeline_admin
+      POSTGRES_PASSWORD: pipeline_pass
+      POSTGRES_DB: satellite_metadata
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    # Tells Docker how to test if Postgres is actually ready
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pipeline_admin -d satellite_metadata"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: pipeline_prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  pushgateway:
+    image: prom/pushgateway:latest
+    container_name: pipeline_pushgateway
+    ports:
+      - "9091:9091"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: pipeline_grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_storage:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    restart: unless-stopped
+
+  pipeline_worker:
+    build: .
+    container_name: pipeline_worker
+    restart: unless-stopped
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=satellite_metadata
+      - DB_USER=pipeline_admin
+      - DB_PASS=pipeline_pass
+      - PUSHGATEWAY_HOST=pushgateway
+      - PUSHGATEWAY_PORT=9091
+      - EUMETSAT_CONSUMER_KEY=${EUMETSAT_CONSUMER_KEY}
+      - EUMETSAT_CONSUMER_SECRET=${EUMETSAT_CONSUMER_SECRET}
+    volumes:
+      - ./data:/app/data
+    # Tells the worker to wait for the healthcheck to pass
+    depends_on:
+      pushgateway:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+
+volumes:
+  grafana_storage:
+  pgdata:

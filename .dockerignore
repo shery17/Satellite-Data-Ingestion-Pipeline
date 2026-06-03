@@ -1,0 +1,49 @@
+# ==========================================
+# 1. Pipeline Secrets & Environment Config
+# ==========================================
+.env
+.env.*
+!.env.example
+
+# ==========================================
+# 2. Python Environment & Cache
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+ENV/
+modules/
+
+# ==========================================
+# 3. Data Pipeline Directories (Storage Tiers)
+# ==========================================
+# Completely ignore all data payloads to keep the Docker build instant
+data/
+
+# ==========================================
+# 4. Logs & Operational Telemetry
+# ==========================================
+logs/*.log
+*.log
+
+# ==========================================
+# 5. Docker & Database Local Storage
+# ==========================================
+.docker/
+postgres_data/
+
+# ==========================================
+# 6. OS & IDE Specific Files
+# ==========================================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
