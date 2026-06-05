@@ -7,6 +7,7 @@ import eumdac
 import config
 import database
 import storage
+import validation  # Imported the new validation engine
 
 def run_ingestion():
     """Executes a single-pass ingestion iteration cycle."""
@@ -74,8 +75,14 @@ def run_ingestion():
                         fdst.write(chunk)
                 
                 # ============================================================
-                # 💡 PLACEHOLDER FOR ROADMAP VALIDATION STEP WILL GO HERE
-                # e.g., validation.validate_sentinel_package(download_path)
+                # 🔬 VALIDATION LAYER INTERCEPT
+                # ============================================================
+                try:
+                    validation.validate_sentinel_package(download_path)
+                except validation.ValidationError as val_err:
+                    logging.error(f"❌ VALIDATION REJECTED for {product_id}: {val_err}")
+                    # Escalates to the exception handler to securely isolate this asset
+                    raise val_err
                 # ============================================================
 
                 bytes_size = os.path.getsize(download_path)
@@ -90,10 +97,19 @@ def run_ingestion():
                 storage.archive_and_compress_payload(product_id, download_path)
                 
             except Exception as err:
-                logging.error(f"Network processing failure: {err}")
+                logging.error(f"Network processing failure or validation drop: {err}")
                 config.METRIC_INGESTION_FAILURE.inc()
+                
+                # Dynamic routing based on the exception type
+                if isinstance(err, validation.ValidationError):
+                    config.METRIC_VALIDATION_REJECTED.inc()
+                    quarantine_filename = f"{product_id}_REJECTED.zip"
+                else:
+                    quarantine_filename = f"{product_id}_ERR.zip"
+                    
                 if os.path.exists(download_path):
-                    shutil.move(download_path, os.path.join(config.QUARANTINE_DIR, f"{product_id}_ERR.zip"))
+                    shutil.move(download_path, os.path.join(config.QUARANTINE_DIR, quarantine_filename))
+                    logging.warning(f"Payload safely diverted to Quarantine Tier as: {quarantine_filename}")
                     
     finally:
         db_conn.close()

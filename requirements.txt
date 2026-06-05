@@ -1,5 +1,7 @@
-eumdac
-python-dotenv
-psycopg2-binary
-prometheus-client
-apscheduler
+eumdac==3.1.1
+python-dotenv==1.2.2
+psycopg2-binary==2.9.12
+prometheus-client==0.25.0
+apscheduler==3.11.2
+netCDF4==1.7.2
+xarray==2026.4.0

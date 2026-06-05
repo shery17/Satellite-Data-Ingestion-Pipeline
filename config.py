@@ -38,3 +38,4 @@ METRIC_INGESTION_FAILURE = Counter('satellite_ingestion_failure_total', 'Total f
 METRIC_BYTES_DOWNLOADED = Counter('satellite_downloaded_bytes_total', 'Total volume of data transferred in bytes', registry=registry)
 METRIC_API_LATENCY = Summary('satellite_api_request_duration_seconds', 'Time spent querying EUMETSAT API', registry=registry)
 METRIC_SYSTEM_STATUS = Gauge('satellite_pipeline_healthy', '1 if pipeline run was successful, 0 if fatal error', registry=registry)
+METRIC_VALIDATION_REJECTED = Counter('satellite_validation_rejected_total', 'Total payloads rejected by validation compliance rules', registry=registry)
