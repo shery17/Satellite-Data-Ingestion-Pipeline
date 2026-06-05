@@ -19,5 +19,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of your pipeline code into the container
 COPY . .
 
+# Set environment variables to optimize Python execution inside containers
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
 # Command to execute your pipeline when the container starts
 CMD ["python", "scheduler.py"]
