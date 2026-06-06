@@ -11,7 +11,6 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
-    # Tells Docker how to test if Postgres is actually ready
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U pipeline_admin -d satellite_metadata"]
       interval: 5s
@@ -26,6 +25,11 @@ services:
     ports:
       - "9090:9090"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   pushgateway:
     image: prom/pushgateway:latest
@@ -33,6 +37,11 @@ services:
     ports:
       - "9091:9091"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9091/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   grafana:
     image: grafana/grafana:latest
@@ -44,6 +53,14 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     restart: unless-stopped
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   pipeline_worker:
     build: .
@@ -61,11 +78,11 @@ services:
       - EUMETSAT_CONSUMER_SECRET=${EUMETSAT_CONSUMER_SECRET}
     volumes:
       - ./data:/app/data
-    # Tells the worker to wait for the healthcheck to pass
+      - ./logs:/app/logs
     depends_on:
-      pushgateway:
-        condition: service_started
       postgres:
+        condition: service_healthy
+      pushgateway:
         condition: service_healthy
 
 volumes:
