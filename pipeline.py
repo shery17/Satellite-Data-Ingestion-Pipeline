@@ -100,6 +100,7 @@ def _ingest_product(db_conn, product, product_id: str) -> None:
         except Exception as dl_err:
             logging.error(f"Download failed for {product_id}: {dl_err}")
             metrics.INGESTION_FAILURE.inc()
+            database.record_quarantine(db_conn, product_id, reason=str(dl_err), status="ERROR")
             return
         finally:
             if tmp_fd is not None:
@@ -119,6 +120,7 @@ def _ingest_product(db_conn, product, product_id: str) -> None:
             quarantine_path = os.path.join(config.QUARANTINE_DIR, f"{product_id}_REJECTED.zip")
             shutil.move(final_path, quarantine_path)
             logging.warning(f"Payload quarantined as: {product_id}_REJECTED.zip")
+            database.record_quarantine(db_conn, product_id, reason=str(val_err), status="REJECTED")
             return
 
         # --- Ingest -----------------------------------------------------
