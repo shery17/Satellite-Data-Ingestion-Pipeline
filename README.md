@@ -14,11 +14,10 @@ Every 15 minutes, the pipeline automatically executes the following workflow:
 
 ---
 
-## Features currently need working on
+## Planned improvements
 
-- Script validation testing for the scientific data files
 - Continous integration + automated testing via github actions
-- Prometheus + grafana monitoring and metrics display
+- Improve Prometheus + grafana monitoring and metrics display
 
 ---
 
