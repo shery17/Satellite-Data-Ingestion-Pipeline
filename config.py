@@ -31,6 +31,12 @@ DB_PASS = os.getenv("DB_PASS")
 
 RETENTION_PERIOD = timedelta(days=7)
 
+# Validation Thresholds (OL_2_WRR spec: S3IPF PDS 004.3 v1B, Sep 2023)
+# Maximum percentage of invalid pixels before a product is rejected
+VALIDATION_MAX_INVALID_PIXEL_PCT = 95.0
+# Expected column count for Reduced Resolution (RR) products
+VALIDATION_RR_EXPECTED_COLUMNS = 1217
+
 # Prometheus Metrics Registry Setup
 registry = CollectorRegistry()
 METRIC_INGESTION_SUCCESS = Counter('satellite_ingestion_success_total', 'Total successful product ingestions', registry=registry)
