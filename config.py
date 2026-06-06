@@ -1,47 +1,90 @@
+"""
+Runtime configuration for the satellite ingestion pipeline.
+
+All settings are read from environment variables so the same Docker image
+can be used in development, staging, and production without code changes.
+Required variables that have no default will raise a clear EnvironmentError
+at import time rather than surfacing as a cryptic downstream failure.
+"""
+
 import os
 from datetime import timedelta
 from dotenv import load_dotenv
-from prometheus_client import CollectorRegistry, Counter, Gauge, Summary
 
 load_dotenv()
 
-# Ensure standard log directories exist
-os.makedirs("logs", exist_ok=True)
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
 
-# Data Directories
+def _require(name: str) -> str:
+    """Return the value of an env var, raising clearly if it is absent."""
+    value = os.getenv(name)
+    if not value:
+        raise EnvironmentError(
+            f"Required environment variable '{name}' is not set. "
+            f"Add it to your .env file or Docker environment block."
+        )
+    return value
+
+
+def _optional(name: str, default: str) -> str:
+    return os.getenv(name, default)
+
+
+# ---------------------------------------------------------------------------
+# Paths — absolute so the pipeline works regardless of the working directory
+# ---------------------------------------------------------------------------
+
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+INBOUND_DIR   = os.path.join(_BASE_DIR, "data", "inbound")
+ARCHIVE_DIR   = os.path.join(_BASE_DIR, "data", "archive")
+QUARANTINE_DIR = os.path.join(_BASE_DIR, "data", "quarantine")
+LOG_DIR       = os.path.join(_BASE_DIR, "logs")
+
+for _path in (INBOUND_DIR, ARCHIVE_DIR, QUARANTINE_DIR, LOG_DIR):
+    os.makedirs(_path, exist_ok=True)
+
+# ---------------------------------------------------------------------------
+# EUMETSAT collection
+# ---------------------------------------------------------------------------
+
 COLLECTION_ID = "EO:EUM:DAT:0408"
-INBOUND_DIR = "data/inbound"
-ARCHIVE_DIR = "data/archive"       
-QUARANTINE_DIR = "data/quarantine"
 
-for path in [INBOUND_DIR, ARCHIVE_DIR, QUARANTINE_DIR]:
-    os.makedirs(path, exist_ok=True)
+# ---------------------------------------------------------------------------
+# Database — DB_PASS is required; all others have sensible defaults
+# ---------------------------------------------------------------------------
 
-# Telemetry Configuration
-PUSHGATEWAY_HOST = os.getenv("PUSHGATEWAY_HOST", "localhost")
-PUSHGATEWAY_PORT = os.getenv("PUSHGATEWAY_PORT", "9091")
-PUSHGATEWAY_URL = f"http://{PUSHGATEWAY_HOST}:{PUSHGATEWAY_PORT}"
+DB_HOST = _optional("DB_HOST", "127.0.0.1")
+DB_PORT = _optional("DB_PORT", "5432")
+DB_NAME = _optional("DB_NAME", "satellite_metadata")
+DB_USER = _optional("DB_USER", "pipeline_admin")
+DB_PASS = _require("DB_PASS")
 
-# Database Configuration
-DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_NAME = os.getenv("DB_NAME", "satellite_metadata")
-DB_USER = os.getenv("DB_USER", "pipeline_admin")
-DB_PASS = os.getenv("DB_PASS")
+# ---------------------------------------------------------------------------
+# Pushgateway
+# ---------------------------------------------------------------------------
 
-RETENTION_PERIOD = timedelta(days=7)
+PUSHGATEWAY_HOST = _optional("PUSHGATEWAY_HOST", "localhost")
+PUSHGATEWAY_PORT = _optional("PUSHGATEWAY_PORT", "9091")
+PUSHGATEWAY_URL  = f"http://{PUSHGATEWAY_HOST}:{PUSHGATEWAY_PORT}"
 
-# Validation Thresholds (OL_2_WRR spec: S3IPF PDS 004.3 v1B, Sep 2023)
-# Maximum percentage of invalid pixels before a product is rejected
-VALIDATION_MAX_INVALID_PIXEL_PCT = 95.0
-# Expected column count for Reduced Resolution (RR) products
+# ---------------------------------------------------------------------------
+# Storage retention
+# ---------------------------------------------------------------------------
+
+RETENTION_DAYS   = int(_optional("RETENTION_DAYS", "7"))
+RETENTION_PERIOD = timedelta(days=RETENTION_DAYS)
+
+# ---------------------------------------------------------------------------
+# Validation thresholds (OL_2_WRR — S3IPF PDS 004.3 v1B, Sep 2023)
+# ---------------------------------------------------------------------------
+
+# Products with more than this percentage of invalid pixels are rejected
+VALIDATION_MAX_INVALID_PIXEL_PCT = float(
+    _optional("VALIDATION_MAX_INVALID_PIXEL_PCT", "95.0")
+)
+
+# Expected column count for Reduced Resolution products (§7.1.1.4.1)
 VALIDATION_RR_EXPECTED_COLUMNS = 1217
-
-# Prometheus Metrics Registry Setup
-registry = CollectorRegistry()
-METRIC_INGESTION_SUCCESS = Counter('satellite_ingestion_success_total', 'Total successful product ingestions', registry=registry)
-METRIC_INGESTION_FAILURE = Counter('satellite_ingestion_failure_total', 'Total failed product ingestions', registry=registry)
-METRIC_BYTES_DOWNLOADED = Counter('satellite_downloaded_bytes_total', 'Total volume of data transferred in bytes', registry=registry)
-METRIC_API_LATENCY = Summary('satellite_api_request_duration_seconds', 'Time spent querying EUMETSAT API', registry=registry)
-METRIC_SYSTEM_STATUS = Gauge('satellite_pipeline_healthy', '1 if pipeline run was successful, 0 if fatal error', registry=registry)
-METRIC_VALIDATION_REJECTED = Counter('satellite_validation_rejected_total', 'Total payloads rejected by validation compliance rules', registry=registry)
