@@ -1,0 +1,170 @@
+{
+  "title": "Satellite Ingestion Pipeline",
+  "uid": "satellite-pipeline",
+  "schemaVersion": 38,
+  "version": 2,
+  "refresh": "1m",
+  "time": { "from": "now-6h", "to": "now" },
+  "tags": ["satellite", "eumetsat", "sentinel-3"],
+  "panels": [
+
+    { "type": "row", "title": "Pipeline Health", "id": 100, "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }, "collapsed": false },
+
+    {
+      "id": 1, "type": "stat", "title": "System Status",
+      "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
+      "options": { "colorMode": "background", "textMode": "value", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": {
+              "0": { "text": "UNHEALTHY", "color": "red", "index": 0 },
+              "1": { "text": "HEALTHY",   "color": "green", "index": 1 }
+            }}
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": 0 }, { "color": "green", "value": 1 }] }
+        }
+      },
+      "targets": [{ "expr": "max(satellite_pipeline_healthy)", "legendFormat": "", "datasource": "Prometheus" }]
+    },
+
+    {
+      "id": 2, "type": "stat", "title": "Success Rate",
+      "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
+      "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": 0 }, { "color": "orange", "value": 0.8 }, { "color": "green", "value": 0.95 }] }
+        }
+      },
+      "targets": [{
+        "expr": "sum(satellite_ingestion_success_total) / clamp_min((sum(satellite_ingestion_success_total) + sum(satellite_ingestion_failure_total)), 1)",
+        "legendFormat": "",
+        "datasource": "Prometheus"
+      }]
+    },
+
+    {
+      "id": 3, "type": "stat", "title": "Total Ingested",
+      "gridPos": { "x": 8, "y": 1, "w": 4, "h": 4 },
+      "options": { "colorMode": "value", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "blue" } } },
+      "targets": [{ "expr": "sum(satellite_ingestion_success_total)", "legendFormat": "", "datasource": "Prometheus" }]
+    },
+
+    {
+      "id": 4, "type": "stat", "title": "Total Failures",
+      "gridPos": { "x": 12, "y": 1, "w": 4, "h": 4 },
+      "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }, { "color": "orange", "value": 1 }, { "color": "red", "value": 5 }] }
+        }
+      },
+      "targets": [{ "expr": "sum(satellite_ingestion_failure_total)", "legendFormat": "", "datasource": "Prometheus" }]
+    },
+
+    {
+      "id": 5, "type": "stat", "title": "Quarantine Files",
+      "gridPos": { "x": 16, "y": 1, "w": 4, "h": 4 },
+      "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }, { "color": "orange", "value": 1 }, { "color": "red", "value": 5 }] }
+        }
+      },
+      "targets": [{ "expr": "max(satellite_quarantine_file_count)", "legendFormat": "", "datasource": "Prometheus" }]
+    },
+
+    {
+      "id": 6, "type": "stat", "title": "Data Downloaded",
+      "gridPos": { "x": 20, "y": 1, "w": 4, "h": 4 },
+      "options": { "colorMode": "value", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "bytes", "color": { "mode": "fixed", "fixedColor": "purple" } } },
+      "targets": [{ "expr": "sum(satellite_downloaded_bytes_total)", "legendFormat": "", "datasource": "Prometheus" }]
+    },
+
+    { "type": "row", "title": "Ingestion Throughput", "id": 200, "gridPos": { "x": 0, "y": 5, "w": 24, "h": 1 }, "collapsed": false },
+
+    {
+      "id": 7, "type": "timeseries", "title": "Products Discovered vs Ingested vs Failed",
+      "gridPos": { "x": 0, "y": 6, "w": 16, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "increase(sum(satellite_products_discovered_total)[15m:])", "legendFormat": "Discovered", "datasource": "Prometheus" },
+        { "expr": "increase(sum(satellite_ingestion_success_total)[15m:])",   "legendFormat": "Ingested",   "datasource": "Prometheus" },
+        { "expr": "increase(sum(satellite_ingestion_failure_total)[15m:])",   "legendFormat": "Failed",     "datasource": "Prometheus" }
+      ]
+    },
+
+    {
+      "id": 8, "type": "timeseries", "title": "Skipped (Already Ingested)",
+      "gridPos": { "x": 16, "y": 6, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "grey" } } },
+      "targets": [{ "expr": "increase(sum(satellite_products_skipped_total)[15m:])", "legendFormat": "Skipped", "datasource": "Prometheus" }]
+    },
+
+    { "type": "row", "title": "Validation", "id": 300, "gridPos": { "x": 0, "y": 14, "w": 24, "h": 1 }, "collapsed": false },
+
+    {
+      "id": 9, "type": "timeseries", "title": "Validation Rejections over Time",
+      "gridPos": { "x": 0, "y": 15, "w": 16, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 }, "color": { "mode": "fixed", "fixedColor": "red" } } },
+      "targets": [{ "expr": "increase(sum(satellite_validation_rejected_total)[15m:])", "legendFormat": "Rejected", "datasource": "Prometheus" }]
+    },
+
+    {
+      "id": 10, "type": "piechart", "title": "Outcome Breakdown",
+      "gridPos": { "x": 16, "y": 15, "w": 8, "h": 8 },
+      "options": { "pieType": "donut", "displayLabels": ["name", "percent"] },
+      "targets": [
+        { "expr": "sum(satellite_ingestion_success_total)",                                                      "legendFormat": "Success",  "datasource": "Prometheus" },
+        { "expr": "sum(satellite_validation_rejected_total)",                                                    "legendFormat": "Rejected", "datasource": "Prometheus" },
+        { "expr": "clamp_min(sum(satellite_ingestion_failure_total) - sum(satellite_validation_rejected_total), 0)", "legendFormat": "Errors",   "datasource": "Prometheus" }
+      ]
+    },
+
+    { "type": "row", "title": "Data Volume", "id": 400, "gridPos": { "x": 0, "y": 23, "w": 24, "h": 1 }, "collapsed": false },
+
+    {
+      "id": 11, "type": "timeseries", "title": "Bytes Downloaded over Time",
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "lineWidth": 2 }, "color": { "mode": "fixed", "fixedColor": "purple" } } },
+      "targets": [{ "expr": "increase(sum(satellite_downloaded_bytes_total)[15m:])", "legendFormat": "Bytes / 15m", "datasource": "Prometheus" }]
+    },
+
+    {
+      "id": 12, "type": "timeseries", "title": "Download Rate (bytes/sec)",
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "lineWidth": 2 }, "color": { "mode": "fixed", "fixedColor": "blue" } } },
+      "targets": [{ "expr": "rate(sum(satellite_downloaded_bytes_total)[15m:])", "legendFormat": "Download rate", "datasource": "Prometheus" }]
+    },
+
+    { "type": "row", "title": "Performance", "id": 500, "gridPos": { "x": 0, "y": 32, "w": 24, "h": 1 }, "collapsed": false },
+
+    {
+      "id": 13, "type": "timeseries", "title": "API Search Latency (p50 / p99)",
+      "gridPos": { "x": 0, "y": 33, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "lineWidth": 2 } } },
+      "targets": [
+        { "expr": "satellite_api_request_duration_seconds{quantile=\"0.5\"}",  "legendFormat": "p50", "datasource": "Prometheus" },
+        { "expr": "satellite_api_request_duration_seconds{quantile=\"0.99\"}", "legendFormat": "p99", "datasource": "Prometheus" }
+      ]
+    },
+
+    {
+      "id": 14, "type": "timeseries", "title": "Product Download Duration (p50 / p99)",
+      "gridPos": { "x": 12, "y": 33, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "lineWidth": 2 } } },
+      "targets": [
+        { "expr": "satellite_download_duration_seconds{quantile=\"0.5\"}",  "legendFormat": "p50", "datasource": "Prometheus" },
+        { "expr": "satellite_download_duration_seconds{quantile=\"0.99\"}", "legendFormat": "p99", "datasource": "Prometheus" }
+      ]
+    }
+
+  ]
+}

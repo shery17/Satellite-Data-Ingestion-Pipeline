@@ -2,6 +2,7 @@ import os
 import logging
 import shutil
 import tempfile
+import time
 from datetime import datetime, timedelta
 import eumdac
 
@@ -55,6 +56,7 @@ def run_ingestion():
                     geo="POLYGON((0 50, 10 50, 10 60, 0 60, 0 50))"
                 ))
             logging.info(f"Discovery complete. Found {len(products)} products.")
+            metrics.PRODUCTS_DISCOVERED.inc(len(products))
         except Exception as e:
             logging.error(f"API Query Failure: {e}")
             metrics.SYSTEM_STATUS.set(0)
@@ -64,10 +66,14 @@ def run_ingestion():
             product_id = str(product)
 
             if database.is_already_ingested(db_conn, product_id):
+                metrics.PRODUCTS_SKIPPED.inc()
                 continue
 
             logging.info(f"New data packet discovered: {product_id}")
             _ingest_product(db_conn, product, product_id)
+
+        # Refresh quarantine size gauge at the end of each cycle
+        metrics.update_quarantine_size()
 
     finally:
         db_conn.close()
@@ -90,6 +96,7 @@ def _ingest_product(db_conn, product, product_id: str) -> None:
     try:
         # --- Download ---------------------------------------------------
         try:
+            dl_start = time.monotonic()
             with os.fdopen(tmp_fd, "wb") as fdst, product.open() as fsrc:
                 tmp_fd = None  # fdopen takes ownership; avoid double-close
                 while True:
@@ -97,6 +104,7 @@ def _ingest_product(db_conn, product, product_id: str) -> None:
                     if not chunk:
                         break
                     fdst.write(chunk)
+            metrics.DOWNLOAD_DURATION.observe(time.monotonic() - dl_start)
         except Exception as dl_err:
             logging.error(f"Download failed for {product_id}: {dl_err}")
             metrics.INGESTION_FAILURE.inc()

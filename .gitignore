@@ -20,20 +20,20 @@ modules/
 # ==========================================
 # 3. Data Pipeline Directories (Storage Tiers)
 # ==========================================
-data/inbound/*.zip
-data/archive/*.tar.gz
-data/quarantine/*
+# Product ZIPs, tarballs, and quarantine files must never enter the repo
+data/inbound/
+data/archive/
+data/quarantine/
 
 # ==========================================
 # 4. Logs & Operational Telemetry
 # ==========================================
-logs/*.log
+logs/
 *.log
 
 # ==========================================
 # 5. Docker & Database Local Storage
 # ==========================================
-# Ignore local named volumes or bind-mount data if mapped to a local folder
 .docker/
 postgres_data/
 
