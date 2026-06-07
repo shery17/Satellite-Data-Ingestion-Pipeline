@@ -3,8 +3,10 @@ Runtime configuration for the satellite ingestion pipeline.
 
 All settings are read from environment variables so the same Docker image
 can be used in development, staging, and production without code changes.
-Required variables that have no default will raise a clear EnvironmentError
-at import time rather than surfacing as a cryptic downstream failure.
+DB_PASS has no default and is validated at connection time (in
+database.get_db_connection) rather than at import time, so modules that
+do not use the database can be imported and tested without a live Postgres
+instance or credentials present.
 """
 
 import os
@@ -53,14 +55,14 @@ for _path in (INBOUND_DIR, ARCHIVE_DIR, QUARANTINE_DIR, LOG_DIR):
 COLLECTION_ID = "EO:EUM:DAT:0408"
 
 # ---------------------------------------------------------------------------
-# Database — DB_PASS is required; all others have sensible defaults
+# Database — all values read from env vars; DB_PASS validated at connection time
 # ---------------------------------------------------------------------------
 
 DB_HOST = _optional("DB_HOST", "127.0.0.1")
 DB_PORT = _optional("DB_PORT", "5432")
 DB_NAME = _optional("DB_NAME", "satellite_metadata")
 DB_USER = _optional("DB_USER", "pipeline_admin")
-DB_PASS = _require("DB_PASS")
+DB_PASS = _optional("DB_PASS", "")
 
 # ---------------------------------------------------------------------------
 # Pushgateway

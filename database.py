@@ -27,6 +27,11 @@ import config
 
 def get_db_connection():
     """Establish a connection to the PostgreSQL container."""
+    if not config.DB_PASS:
+        raise EnvironmentError(
+            "Required environment variable 'DB_PASS' is not set. "
+            "Add it to your .env file or Docker environment block."
+        )
     return psycopg2.connect(
         host=config.DB_HOST,
         port=int(config.DB_PORT),
