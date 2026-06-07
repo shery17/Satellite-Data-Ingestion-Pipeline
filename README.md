@@ -86,16 +86,22 @@ A product recorded in either table is not re-downloaded on subsequent scheduler 
 
 ## Observability
 
-The following Prometheus metrics are pushed to the Pushgateway after every scheduler cycle and displayed in Grafana:
+The following Prometheus metrics are pushed to the Pushgateway after every scheduler cycle and displayed in a provisioned Grafana dashboard (loads automatically on `docker compose up` — no manual setup required):
 
 | Metric | Type | Description |
 |--------|------|-------------|
 | `satellite_ingestion_success_total` | Counter | Successfully ingested products |
 | `satellite_ingestion_failure_total` | Counter | Failed ingestions (all causes) |
 | `satellite_validation_rejected_total` | Counter | Products rejected by validation |
+| `satellite_products_discovered_total` | Counter | Products returned by each EUMETSAT collection search |
+| `satellite_products_skipped_total` | Counter | Products skipped — already ingested or quarantined |
 | `satellite_downloaded_bytes_total` | Counter | Cumulative bytes downloaded |
 | `satellite_api_request_duration_seconds` | Summary | EUMETSAT API search latency |
+| `satellite_download_duration_seconds` | Summary | Per-product download duration |
 | `satellite_pipeline_healthy` | Gauge | 1 = last cycle healthy, 0 = fatal error |
+| `satellite_quarantine_file_count` | Gauge | Files currently in the quarantine directory |
+
+The dashboard covers five sections: Pipeline Health, Ingestion Throughput, Validation, Data Volume, and Performance.
 
 ---
 
@@ -107,9 +113,9 @@ The following Prometheus metrics are pushed to the Pushgateway after every sched
 | `postgres:15-alpine` | Product lifecycle audit ledger |
 | `prom/prometheus` | Metrics scraping and storage |
 | `prom/pushgateway` | Receives metrics pushed by the worker |
-| `grafana/grafana` | Operational dashboard |
+| `grafana/grafana` | Operational dashboard — auto-provisioned, no manual setup required |
 
-All services have Docker healthchecks. The worker waits for Postgres and Pushgateway to be healthy before starting.
+All services have Docker healthchecks. The worker waits for Postgres and Pushgateway to be healthy before starting. Grafana waits for Prometheus.
 
 ---
 
